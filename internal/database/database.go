@@ -14,13 +14,15 @@ type user struct {
 
 func MakeDatabase() Application {
 	return Application{
-		data: make(map[string]user),
+		data: make(database),
 	}
 }
 
 type Application struct {
-	data map[string]user
+	data database
 }
+
+type database map[string]user
 
 func (db *Application) CreateUser(firstName, lastName, biography string) string {
 	id, _ := uuid.NewUUID()
@@ -36,4 +38,8 @@ func (db *Application) CreateUser(firstName, lastName, biography string) string 
 	fmt.Println(db.data)
 
 	return id.String()
+}
+
+func (db Application) ListUsers() database {
+	return db.data
 }

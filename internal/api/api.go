@@ -44,7 +44,7 @@ func NewHandler(db database.Application) http.Handler {
 
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/users", handleCreateUser(db))
-		r.Get("/users", func(w http.ResponseWriter, r *http.Request) {})
+		r.Get("/users", handleListUsers(db))
 		r.Get("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
 		r.Put("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
 		r.Delete("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
@@ -54,6 +54,13 @@ func NewHandler(db database.Application) http.Handler {
 }
 
 type CreateUserRequestBody struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Biography string `json:"biography"`
+}
+
+type UserResponse struct {
+	ID        string `json:"id"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Biography string `json:"biography"`
@@ -101,5 +108,29 @@ func handleCreateUser(db database.Application) http.HandlerFunc {
 		sendJSON(w, Response{
 			Data: id,
 		}, http.StatusCreated)
+	}
+}
+
+func handleListUsers(db database.Application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var userResponse []UserResponse
+		users := db.ListUsers()
+
+		for id, u := range users {
+			userResponse = append(userResponse, UserResponse{
+				ID:        id,
+				FirstName: u.FirstName,
+				LastName:  u.LastName,
+				Biography: u.Biography,
+			})
+		}
+
+		sendJSON(
+			w,
+			Response{
+				Data: userResponse,
+			},
+			http.StatusOK,
+		)
 	}
 }
