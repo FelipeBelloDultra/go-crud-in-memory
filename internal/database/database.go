@@ -52,6 +52,21 @@ func (db Application) GetUserByID(id string) (*user, error) {
 	return &user, nil
 }
 
+func (db *Application) UpdateUser(id string, firstName, lastName, biography string) (user, error) {
+	_, err := db.GetUserByID(id)
+	if err != nil {
+		return user{}, err
+	}
+
+	db.data[id] = user{
+		FirstName: firstName,
+		LastName:  lastName,
+		Biography: biography,
+	}
+
+	return db.data[id], nil
+}
+
 func (db *Application) DeleteUser(id string) error {
 	_, ok := db.data[id]
 

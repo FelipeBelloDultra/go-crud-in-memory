@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -13,6 +14,20 @@ import (
 type Response struct {
 	Error string `json:"error,omitempty"`
 	Data  any    `json:"data,omitempty"`
+}
+
+func validateUser(firstName, lastName, biography string) error {
+	if len(firstName) < 2 || len(firstName) > 50 {
+		return errors.New("first name must be between 2 and 50 characters long")
+	}
+	if len(lastName) < 2 || len(lastName) > 50 {
+		return errors.New("last name must be between 2 and 50 characters long")
+	}
+	if len(biography) < 20 || len(biography) > 450 {
+		return errors.New("biography must be between 20 and 450 characters long")
+	}
+
+	return nil
 }
 
 func sendJSON(w http.ResponseWriter, resp Response, status int) {
@@ -46,14 +61,14 @@ func NewHandler(db database.Application) http.Handler {
 		r.Post("/users", handleCreateUser(db))
 		r.Get("/users", handleListUsers(db))
 		r.Get("/users/{id}", handleGetUserByID(db))
-		r.Put("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
+		r.Put("/users/{id}", handleUpdateUserByID(db))
 		r.Delete("/users/{id}", handleDeleteUser(db))
 	})
 
 	return r
 }
 
-type CreateUserRequestBody struct {
+type UserRequestBody struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Biography string `json:"biography"`
@@ -68,7 +83,7 @@ type UserResponse struct {
 
 func handleCreateUser(db database.Application) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var body CreateUserRequestBody
+		var body UserRequestBody
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			sendJSON(
 				w,
@@ -78,26 +93,10 @@ func handleCreateUser(db database.Application) http.HandlerFunc {
 			return
 		}
 
-		if len(body.FirstName) < 2 || len(body.FirstName) > 50 {
+		if err := validateUser(body.FirstName, body.LastName, body.Biography); err != nil {
 			sendJSON(
 				w,
-				Response{Error: "First name must be between 2 and 50 characters long"},
-				http.StatusBadRequest,
-			)
-			return
-		}
-		if len(body.LastName) < 2 || len(body.LastName) > 50 {
-			sendJSON(
-				w,
-				Response{Error: "Last name must be between 2 and 50 characters long"},
-				http.StatusBadRequest,
-			)
-			return
-		}
-		if len(body.Biography) < 20 || len(body.Biography) > 450 {
-			sendJSON(
-				w,
-				Response{Error: "Biography must be between 20 and 450 characters long"},
+				Response{Error: err.Error()},
 				http.StatusBadRequest,
 			)
 			return
@@ -160,6 +159,54 @@ func handleGetUserByID(db database.Application) http.HandlerFunc {
 			w,
 			Response{
 				Data: user,
+			},
+			http.StatusOK,
+		)
+	}
+}
+
+func handleUpdateUserByID(db database.Application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+
+		var body UserRequestBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			sendJSON(
+				w,
+				Response{Error: "Please provide FirstName LastName and bio for the user"},
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		if err := validateUser(body.FirstName, body.LastName, body.Biography); err != nil {
+			sendJSON(
+				w,
+				Response{Error: err.Error()},
+				http.StatusBadRequest,
+			)
+			return
+		}
+
+		u, err := db.UpdateUser(id, body.FirstName, body.LastName, body.Biography)
+		if err != nil {
+			sendJSON(
+				w,
+				Response{Error: err.Error()},
+				http.StatusInternalServerError,
+			)
+			return
+		}
+
+		sendJSON(
+			w,
+			Response{
+				Data: UserResponse{
+					ID:        id,
+					FirstName: u.FirstName,
+					LastName:  u.FirstName,
+					Biography: u.Biography,
+				},
 			},
 			http.StatusOK,
 		)
