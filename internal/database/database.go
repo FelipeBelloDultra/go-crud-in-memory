@@ -43,3 +43,13 @@ func (db *Application) CreateUser(firstName, lastName, biography string) string 
 func (db Application) ListUsers() database {
 	return db.data
 }
+
+func (db Application) GetUserByID(id string) (*user, error) {
+	user, ok := db.data[id]
+
+	if !ok {
+		return nil, fmt.Errorf("the user with the specified ID does not exist")
+	}
+
+	return &user, nil
+}

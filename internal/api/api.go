@@ -45,7 +45,7 @@ func NewHandler(db database.Application) http.Handler {
 	r.Route("/api", func(r chi.Router) {
 		r.Post("/users", handleCreateUser(db))
 		r.Get("/users", handleListUsers(db))
-		r.Get("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
+		r.Get("/users/{id}", handleGetUserByID(db))
 		r.Put("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
 		r.Delete("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
 	})
@@ -129,6 +129,37 @@ func handleListUsers(db database.Application) http.HandlerFunc {
 			w,
 			Response{
 				Data: userResponse,
+			},
+			http.StatusOK,
+		)
+	}
+}
+
+func handleGetUserByID(db database.Application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		u, err := db.GetUserByID(id)
+
+		if err != nil {
+			sendJSON(
+				w,
+				Response{Error: err.Error()},
+				http.StatusNotFound,
+			)
+			return
+		}
+
+		user := UserResponse{
+			ID:        id,
+			FirstName: u.FirstName,
+			LastName:  u.FirstName,
+			Biography: u.Biography,
+		}
+
+		sendJSON(
+			w,
+			Response{
+				Data: user,
 			},
 			http.StatusOK,
 		)
