@@ -47,7 +47,7 @@ func NewHandler(db database.Application) http.Handler {
 		r.Get("/users", handleListUsers(db))
 		r.Get("/users/{id}", handleGetUserByID(db))
 		r.Put("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
-		r.Delete("/users/{id}", func(w http.ResponseWriter, r *http.Request) {})
+		r.Delete("/users/{id}", handleDeleteUser(db))
 	})
 
 	return r
@@ -160,6 +160,30 @@ func handleGetUserByID(db database.Application) http.HandlerFunc {
 			w,
 			Response{
 				Data: user,
+			},
+			http.StatusOK,
+		)
+	}
+}
+
+func handleDeleteUser(db database.Application) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		err := db.DeleteUser(id)
+
+		if err != nil {
+			sendJSON(
+				w,
+				Response{Error: err.Error()},
+				http.StatusNotFound,
+			)
+			return
+		}
+
+		sendJSON(
+			w,
+			Response{
+				Data: "id " + id + " deleted",
 			},
 			http.StatusOK,
 		)

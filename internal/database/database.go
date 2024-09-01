@@ -1,7 +1,7 @@
 package database
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/google/uuid"
 )
@@ -35,8 +35,6 @@ func (db *Application) CreateUser(firstName, lastName, biography string) string 
 
 	db.data[id.String()] = user
 
-	fmt.Println(db.data)
-
 	return id.String()
 }
 
@@ -48,8 +46,20 @@ func (db Application) GetUserByID(id string) (*user, error) {
 	user, ok := db.data[id]
 
 	if !ok {
-		return nil, fmt.Errorf("the user with the specified ID does not exist")
+		return nil, errors.New("the user with the specified ID does not exist")
 	}
 
 	return &user, nil
+}
+
+func (db *Application) DeleteUser(id string) error {
+	_, ok := db.data[id]
+
+	if !ok {
+		return errors.New("the user with the specified ID does not exist")
+	}
+
+	delete(db.data, id)
+
+	return nil
 }
